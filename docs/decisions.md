@@ -70,3 +70,19 @@ Since evaluations are immutable, the stored value can never drift from its answe
 
 **Discarded alternative:** Computing the score on every read. Always "fresh", but a
 weight change would silently rewrite every past score.
+
+## (f) How the database enforces "one per week" and "immutable"
+
+**Decision:**
+- One per week: `evaluation.week_start` (the Monday of the ISO week, computed by the
+  server) and `UNIQUE (leader_id, employee_id, week_start)`. A duplicate returns 409.
+- Immutable: the API has no update or delete endpoints, and a trigger on `evaluation`
+  and `answer` rejects any `UPDATE` or `DELETE`. Foreign keys to `employee` use
+  `ON DELETE RESTRICT`, so deleting an employee cannot erase evaluation history.
+
+**Why:** Rules enforced only in the backend can be bypassed. A "check, then insert"
+in the code fails under a race condition (a double click sends two requests that both
+pass the check). The database is the final word: the second insert always fails.
+
+**Discarded alternative:** Enforcing both rules only in the backend. Simpler, but a
+double click, a script or a manual query could break them.
