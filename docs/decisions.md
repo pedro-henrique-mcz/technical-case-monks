@@ -57,3 +57,16 @@ become column names, with no foreign key, and adding a question changes the tabl
 **Discarded alternative:** Weights as constants in the code. Simpler, but there is no
 foreign key protection, and changing a weight would silently change every past score
 if scores were recalculated.
+
+## (e) Final score: stored or computed
+
+**Decision:** The final score is stored in `evaluation.final_score` (`numeric(3,2)`),
+computed once by the backend at submission, in the same transaction as the answers:
+`sum(score × weight) / 100`, which gives a value from 1.00 to 4.00.
+
+**Why:** It is a snapshot. The score must reflect the criteria at the moment of
+submission. If a weight changes later, past evaluations stay exactly as they were.
+Since evaluations are immutable, the stored value can never drift from its answers.
+
+**Discarded alternative:** Computing the score on every read. Always "fresh", but a
+weight change would silently rewrite every past score.
