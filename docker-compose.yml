@@ -1,0 +1,19 @@
+services:
+  db:
+    image: postgres:17
+    environment:
+      POSTGRES_USER: monks
+      POSTGRES_PASSWORD: monks
+      POSTGRES_DB: monks
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+      - ./db/init:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U monks -d monks"]
+      interval: 5s
+      retries: 10
+
+volumes:
+  pgdata:
