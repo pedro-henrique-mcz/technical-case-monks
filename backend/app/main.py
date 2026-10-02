@@ -1,4 +1,5 @@
 from contextlib import asynccontextmanager
+from app.routers import employee, health
 
 from fastapi import FastAPI
 
@@ -13,5 +14,6 @@ async def lifespan(app: FastAPI):
 
 app = FastAPI(title="Monks Evaluation API", lifespan=lifespan)
 app.include_router(health.router)
-
+app.include_router(health.router)
+app.include_router(employee.router)  
 
