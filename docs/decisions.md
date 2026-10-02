@@ -86,3 +86,20 @@ pass the check). The database is the final word: the second insert always fails.
 
 **Discarded alternative:** Enforcing both rules only in the backend. Simpler, but a
 double click, a script or a manual query could break them.
+
+## (g) How the API identifies the current leader
+
+**Decision:** The front end stores the selected leader's id in `localStorage` and sends it
+on every request in the `X-Leader-Id` HTTP header. The API reads the leader from this header.
+
+**Why:** "Who is asking" is identity, not a resource, so it belongs in a header, not in the URL.
+This is the same place real authentication goes (`Authorization: Bearer <token>`): adding login
+later only changes how the header is read, not the routes. The API stays stateless: every request
+carries its own identity.
+
+**Alternatives considered:**
+- Path parameter (`/leaders/{id}/subordinates`): mixes who is asking with what is being asked.
+- Query parameter (`?leader_id=1`): same issue, and ends up in browser history and server logs.
+
+**Limitations:** There is no login, as stated in the challenge, so any client can send any id.
+The server still validates that the id exists and only returns employees below that leader.
