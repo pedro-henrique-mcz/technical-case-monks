@@ -1,10 +1,12 @@
 from contextlib import asynccontextmanager
-from app.routers import employee, health
 
+from fastapi.middleware.cors import CORSMiddleware
 from fastapi import FastAPI
 
+from app.routers import employee, health
+from app.config import settings
+
 from app.db import pool
-from app.routers import health
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -13,7 +15,12 @@ async def lifespan(app: FastAPI):
     pool.close()
 
 app = FastAPI(title="Monks Evaluation API", lifespan=lifespan)
-app.include_router(health.router)
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=settings.cors_origins.split(","),
+    allow_methods=["GET", "POST"],
+    allow_headers=["X-Leader-Id", "Content-Type"],
+)
 app.include_router(health.router)
 app.include_router(employee.router)  
 
