@@ -1,6 +1,7 @@
 This document records the main design decisions, each with its reasoning and the alternatives discarded.
 AI tools helped polish the wording; every decision was made and reviewed by me.
 
+## (a) What "one week" means
 
 **Decision:** A week is an ISO 8601 week (Monday to Sunday) in the company time zone,
 `America/Sao_Paulo`. The evaluation timestamp is set by the server and stored in UTC
@@ -101,3 +102,31 @@ carries its own identity.
 
 **Limitations:** There is no login, as stated in the challenge, so any client can send any id.
 The server still validates that the id exists and only returns employees below that leader.
+
+## (h) Tests run against a separate database
+
+**Decision:** Tests use a database named `monks_test` on the same Postgres server as the
+compose. It is dropped and rebuilt from `db/init` at the start of every run, and the
+evaluation tables are emptied with `TRUNCATE` before each test.
+
+**Why:** Running the tests never erases data created by hand during development or for a demo.
+Every run starts from the exact schema that ships with the project. `TRUNCATE` is used
+instead of `DELETE` because the immutability trigger blocks `DELETE`, and `TRUNCATE`
+does not fire row-level triggers.
+
+**Discarded alternative:** Using the compose database (`monks`). Zero setup, but every
+test run would wipe the evaluations created while testing the app.
+
+## (i) Distance in the hierarchy and cycles
+
+**Decision:** To order evaluations by "highest evaluator first", the recursive query carries a
+`depth` column (1 = direct report). Because `leader_lead` is many-to-many, the same person can be
+reached through more than one path; the distance used is the shortest one (`MIN(depth)`), which is
+the closest relationship to the viewer. Cycles are stopped with Postgres's `CYCLE` clause.
+
+**Why:** With a `depth` column, rows reached through different paths are no longer identical, so
+`UNION` stops removing them and no longer protects against a cycle. `CYCLE` marks the row that
+closes a loop and stops there. A test inserts a cycle and checks that the query still returns.
+
+**Discarded alternative:** Tracking the path in an array by hand (`path || id`, `NOT id = ANY(path)`).
+It works, but `CYCLE` (Postgres 14+) does the same thing in one line.
