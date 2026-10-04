@@ -3,7 +3,7 @@ from contextlib import asynccontextmanager
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi import FastAPI
 
-from app.routers import employee, health
+from app.routers import employee, evaluation, health, question
 from app.config import settings
 
 from app.db import pool
@@ -22,5 +22,6 @@ app.add_middleware(
     allow_headers=["X-Leader-Id", "Content-Type"],
 )
 app.include_router(health.router)
-app.include_router(employee.router)  
-
+app.include_router(employee.router)
+app.include_router(question.router)
+app.include_router(evaluation.router)
