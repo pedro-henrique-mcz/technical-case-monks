@@ -20,17 +20,17 @@ def exists(employee_id: int) -> bool:
 def list_subordinates(leader_id: int) -> list[dict]:
     with pool.connection() as conn:
         return conn.execute("""
-            WITH RECURSIVE last_lead AS (
+            WITH RECURSIVE subordinates AS (
                 SELECT lead_id AS id
-                FROM leader_lead
+                FROM subordinates
                 WHERE leader_id = %s
                 UNION
                 SELECT leader_lead.lead_id
-                FROM leader_lead
-                JOIN last_lead ON leader_lead.leader_id = last_lead.id
+                FROM subordinates
+                JOIN subordinates ON leader_lead.leader_id = subordinates.id
             )
             SELECT employee.id, employee.name
             FROM employee
-            JOIN last_lead ON employee.id = last_lead.id
+            JOIN subordinates ON employee.id = subordinates.id
             ORDER BY employee.name
         """, (leader_id,)).fetchall()
