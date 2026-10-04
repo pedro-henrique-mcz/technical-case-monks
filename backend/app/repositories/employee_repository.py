@@ -22,11 +22,11 @@ def list_subordinates(leader_id: int) -> list[dict]:
         return conn.execute("""
             WITH RECURSIVE subordinates AS (
                 SELECT lead_id AS id
-                FROM subordinates
+                FROM leader_lead
                 WHERE leader_id = %s
                 UNION
                 SELECT leader_lead.lead_id
-                FROM subordinates
+                FROM leader_lead
                 JOIN subordinates ON leader_lead.leader_id = subordinates.id
             )
             SELECT employee.id, employee.name
