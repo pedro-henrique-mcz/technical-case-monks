@@ -1,7 +1,5 @@
-Hello guys, I'm Pedro, and this document will allow you to understand some of my softwares 
-decisions and architectural choices.
-I am using some AI tools to make the MD text a bit more polished and easier to understand, 
-but all final decisions were carefully considered and made by me. 
+This document records the main design decisions, each with its reasoning and the alternatives discarded.
+AI tools helped polish the wording; every decision was made and reviewed by me.
 
 
 **Decision:** A week is an ISO 8601 week (Monday to Sunday) in the company time zone,
