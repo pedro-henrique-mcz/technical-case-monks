@@ -31,7 +31,7 @@ def exists(employee_id: int) -> bool:
 def list_subordinates(leader_id: int) -> list[dict]:
     with pool.connection() as conn:
         return conn.execute(SUBORDINATES_CTE + """
-            SELECT employee.id, employee.name
+            SELECT employee.id, employee.name, employee.position_name
             FROM employee
             JOIN subordinates ON employee.id = subordinates.id
             ORDER BY employee.name

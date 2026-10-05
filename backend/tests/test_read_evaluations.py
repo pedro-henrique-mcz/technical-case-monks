@@ -1,23 +1,8 @@
-from tests.helpers import BOB, EVA, HENRY, JAMES, evaluate
+from tests.helpers import BOB, EVA, HENRY, JAMES, evaluate, evaluate_last_week
 
 
 def read(client, viewer_id, employee_id):
     return client.get(f"/employees/{employee_id}/evaluations", headers={"X-Leader-Id": str(viewer_id)})
-
-
-def evaluate_last_week(db, leader_id, employee_id, scores=(1, 1, 1, 1, 1, 1)):
-    # The API always stamps "now", so an older week can only be created directly in the database.
-    evaluation_id = db.execute("""
-        INSERT INTO evaluation (leader_id, employee_id, submitted_at, final_score)
-        VALUES (%s, %s, now() - interval '7 days', 1)
-        RETURNING id
-    """, (leader_id, employee_id)).fetchone()["id"]
-    with db.cursor() as cur:
-        cur.executemany(
-            "INSERT INTO answer (evaluation_id, question_id, score) VALUES (%s, %s, %s)",
-            [(evaluation_id, number, score) for number, score in enumerate(scores, start=1)],
-        )
-    db.commit()
 
 
 def test_viewer_sees_own_and_lower_evaluations_highest_evaluator_first(client):
