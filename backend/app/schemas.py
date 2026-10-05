@@ -6,6 +6,19 @@ class Employee(BaseModel):
     name: str
 
 
+class Highlight(BaseModel):
+    leader_name: str
+    week_start: date
+    final_score: float
+
+
+class Subordinate(BaseModel):
+    id: int
+    name: str
+    position_name: str
+    highlight: Highlight | None
+
+
 class Question(BaseModel):
     id: int
     label: str

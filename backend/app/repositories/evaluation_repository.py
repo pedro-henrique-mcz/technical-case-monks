@@ -3,6 +3,7 @@ from decimal import Decimal
 from psycopg.errors import UniqueViolation
 
 from app.db import pool
+from app.repositories.visibility import VISIBLE_EVALUATIONS_CTE
 
 
 class DuplicateEvaluationError(Exception):
@@ -32,29 +33,12 @@ def create(leader_id: int, employee_id: int, final_score: Decimal, answers: list
 
 def list_visible(viewer_id: int, employee_id: int) -> list[dict]:
     with pool.connection() as conn:
-        return conn.execute("""
-            WITH RECURSIVE tree (id, depth) AS (
-                SELECT lead_id, 1
-                FROM leader_lead
-                WHERE leader_id = %(viewer_id)s
-                UNION ALL
-                SELECT leader_lead.lead_id, tree.depth + 1
-                FROM leader_lead
-                JOIN tree ON leader_lead.leader_id = tree.id
-            ) CYCLE id SET is_cycle USING path,
-            distance AS (
-                SELECT id, MIN(depth) AS depth
-                FROM tree
-                WHERE NOT is_cycle
-                GROUP BY id
-                UNION ALL
-                SELECT %(viewer_id)s, 0
-            )
-            SELECT evaluation.id,
-                   evaluation.leader_id,
+        return conn.execute(VISIBLE_EVALUATIONS_CTE + """
+            SELECT visible_evaluation.id,
+                   visible_evaluation.leader_id,
                    leader.name AS leader_name,
-                   evaluation.week_start,
-                   evaluation.final_score,
+                   visible_evaluation.week_start,
+                   visible_evaluation.final_score,
                    (SELECT json_agg(json_build_object(
                                'question_id', question.id,
                                'label', question.label,
@@ -63,10 +47,23 @@ def list_visible(viewer_id: int, employee_id: int) -> list[dict]:
                            ) ORDER BY question.id)
                     FROM answer
                     JOIN question ON question.id = answer.question_id
-                    WHERE answer.evaluation_id = evaluation.id) AS answers
-            FROM evaluation
-            JOIN distance ON distance.id = evaluation.leader_id
-            JOIN employee AS leader ON leader.id = evaluation.leader_id
-            WHERE evaluation.employee_id = %(employee_id)s
-            ORDER BY distance.depth, evaluation.week_start DESC
+                    WHERE answer.evaluation_id = visible_evaluation.id) AS answers
+            FROM visible_evaluation
+            JOIN employee AS leader ON leader.id = visible_evaluation.leader_id
+            WHERE visible_evaluation.employee_id = %(employee_id)s
+            ORDER BY visible_evaluation.display_order
         """, {"viewer_id": viewer_id, "employee_id": employee_id}).fetchall()
+
+
+def list_highlights(viewer_id: int) -> list[dict]:
+    """The highlighted evaluation of each employee below the viewer (only those that have one)."""
+    with pool.connection() as conn:
+        return conn.execute(VISIBLE_EVALUATIONS_CTE + """
+            SELECT visible_evaluation.employee_id,
+                   leader.name AS leader_name,
+                   visible_evaluation.week_start,
+                   visible_evaluation.final_score
+            FROM visible_evaluation
+            JOIN employee AS leader ON leader.id = visible_evaluation.leader_id
+            WHERE visible_evaluation.display_order = 1
+        """, {"viewer_id": viewer_id}).fetchall()

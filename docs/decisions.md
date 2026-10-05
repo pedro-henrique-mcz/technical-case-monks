@@ -130,3 +130,19 @@ closes a loop and stops there. A test inserts a cycle and checks that the query 
 
 **Discarded alternative:** Tracking the path in an array by hand (`path || id`, `NOT id = ANY(path)`).
 It works, but `CYCLE` (Postgres 14+) does the same thing in one line.
+
+## (j) The highlight in the list: one rule, no N+1
+
+**Decision:** The visibility rule (decisions b and i) lives in one SQL fragment,
+`VISIBLE_EVALUATIONS_CTE`, which numbers each employee's visible evaluations with `display_order`
+(highest evaluator first, then newest week). The detail endpoint returns all of them in that order;
+`GET /subordinates` takes only `display_order = 1`. The list is built from two fixed queries
+(subordinates + highlights) merged by employee id in the service.
+
+**Why:** The highlight in the list and the first item of the detail can never disagree, because
+they come from the same rule. Two queries cost the same for 3 or 300 people.
+
+**Discarded alternative:** Calling the detail query once per subordinate. Reuses the code, but it is
+an N+1: one database round trip per person in the list.
+**Discarded alternative:** One single query joining employees and evaluations. One round trip less,
+but the employee repository would have to know about evaluations.
