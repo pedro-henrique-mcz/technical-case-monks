@@ -146,3 +146,20 @@ they come from the same rule. Two queries cost the same for 3 or 300 people.
 an N+1: one database round trip per person in the list.
 **Discarded alternative:** One single query joining employees and evaluations. One round trip less,
 but the employee repository would have to know about evaluations.
+
+## (k) Front end: plain React state, no router or UI library
+
+**Decision:** One screen with React state only. `App` holds the leader, the list and the selected
+person; each component loads what it shows (`EvaluationDetail` its evaluations, `EvaluationForm` the
+questions). After a submit, the detail reloads itself and asks `App` to reload the list, so the
+highlight changes in both places. Every effect ignores answers that arrive after the leader or the
+person changed. The submit button is disabled while sending; the `UNIQUE` constraint (decision f)
+still turns a second request into a 409, shown as "você já avaliou essa pessoa nesta semana".
+
+**Why:** The screen has one view and three states (list, detail, form). A router, a data-fetching
+library or a component library would add dependencies without solving a problem the app has.
+`week_start` is formatted by splitting the text, not with `new Date()`: a date-only string is read
+as midnight UTC, which is still the previous day in Brazil.
+
+**Discarded alternative:** React Router with one URL per person. Useful for sharing links, which
+the challenge does not ask for.
