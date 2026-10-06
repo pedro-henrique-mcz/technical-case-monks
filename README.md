@@ -9,7 +9,8 @@ below them.
 
 ## Run it
 
-Requirements: Docker with Compose.
+Requirements: Docker with Compose. That is all the app needs; the tests also need Python and Node on
+the host (see [Run the tests](#run-the-tests)).
 
 ```bash
 cp .env.example .env
@@ -24,6 +25,8 @@ docker compose up --build
 
 The database is created and seeded from `db/init` the first time the volume is created.
 To start again from a clean database: `docker compose down -v`.
+If port 5432, 8000 or 5173 is already in use (for example by a local PostgreSQL), stop that
+service or change the host port in `docker-compose.yml`.
 
 ## Try it
 
@@ -38,6 +41,25 @@ is kept in `localStorage`, so it survives a page reload. A walk-through that cov
    highlight, and Henry's moves to the history below it.
 5. Back as Henry: Bob's evaluation is not visible. Henry only sees evaluations made by himself
    or by people below him.
+
+## Architecture and flow
+
+```mermaid
+flowchart LR
+    B[Browser<br/>React + TS] -- "loads the app" --> W[web<br/>nginx :5173]
+    B -- "JSON + X-Leader-Id" --> A[api<br/>FastAPI :8000]
+    A -- "parameterized SQL" --> D[(db<br/>PostgreSQL :5432)]
+```
+
+1. The user picks who they are; the choice is saved in `localStorage` and sent as `X-Leader-Id`.
+2. **Routers** validate the request with Pydantic (scores 1–4, no repeated question).
+3. **Services** apply the rules: all 6 questions answered, the employee below the leader (recursive
+   query), and the score computed from the weights.
+4. **Repositories** run the SQL. An evaluation and its answers are saved in one transaction; the
+   `UNIQUE` constraint turns a second evaluation in the same week into a 409.
+
+**Configuration and keys:** everything lives in `.env`, copied from `.env.example`. There are no
+external API keys; the only secrets are the local database credentials.
 
 ## API
 
@@ -78,10 +100,13 @@ Data model: [docs/er-diagram.md](docs/er-diagram.md).
 The tests use a separate database, `monks_test`, on the same Postgres, rebuilt from `db/init` on
 every run, so they never touch the data of the running app ([decision h](docs/decisions.md#h-tests-run-against-a-separate-database)).
 
+Requirements on the host: Python 3.12+ with `venv` (on Debian/Ubuntu: `sudo apt install python3-venv`),
+and Node 24 for the front end checks.
+
 ```bash
 docker compose up -d db
 cd backend
-python -m venv .venv && source .venv/bin/activate
+python3 -m venv .venv && source .venv/bin/activate
 pip install -r requirements-dev.txt
 pytest
 ```
